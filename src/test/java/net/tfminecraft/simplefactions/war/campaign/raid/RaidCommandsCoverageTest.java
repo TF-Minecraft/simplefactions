@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import net.tfminecraft.simplefactions.testsupport.FactionDomainFixture;
 import net.tfminecraft.simplefactions.war.battle.warband.Warband;
 import net.tfminecraft.simplefactions.war.battle.warband.WarbandManager;
 import net.tfminecraft.simplefactions.war.campaign.progression.CampaignCoalitionService.CampaignCoalition;
+import net.tfminecraft.simplefactions.war.campaign.runtime.CampaignClock;
 import net.tfminecraft.simplefactions.war.core.War;
 import net.tfminecraft.simplefactions.war.enums.WarEndReason;
 import org.bukkit.Bukkit;
@@ -42,6 +44,8 @@ class RaidCommandsCoverageTest {
 
   @BeforeEach
   void setUp() {
+    // The fixture musters close at 18:00 on battle day; run the campaign clock an hour before.
+    CampaignClock.add(Duration.between(Instant.now(), Instant.parse("2026-10-10T17:00:00Z")));
     databases = mockConstruction(Database.class);
     fixture = new FactionDomainFixture();
     alice = fixture.player("Alice");
@@ -58,6 +62,7 @@ class RaidCommandsCoverageTest {
 
   @AfterEach
   void close() {
+    CampaignClock.reset();
     WarbandManager.get().clear();
     WarbandManager.get().addAll(previousBands);
     fixture.close();
