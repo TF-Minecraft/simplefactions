@@ -87,6 +87,9 @@ public class CommandManager implements Listener, CommandExecutor{
 					&& EspionageCommands.matches(args[0])) {
 				return EspionageCommands.handle(p, args);
 			}
+			if (InviteCommands.handles(cmd.getName(), args)) {
+				return InviteCommands.handle(p, cmd.getName(), args);
+			}
 			if((cmd.getName().equalsIgnoreCase(cmd1) || cmd.getName().equalsIgnoreCase(cmd2)) && args.length < 1) {
 				p.sendMessage("§a[SimpleFactions]§c Error with command format, use the gameplay guide for a list of commands");
 				return true;
@@ -249,38 +252,9 @@ public class CommandManager implements Listener, CommandExecutor{
 					return true;
 				} 
 				guild.invite(name);
-				invited.sendMessage("§aYou have been invited to the guild "+guild.getName());
-				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("join") && args.length == 2) {
-				if(FactionManager.getGuildByLeader(p.getName()) != null) {
-					p.sendMessage("§cYou are the leader of a guild");
-					return true;
-				}
-				if(!FactionManager.canJoinGuild(p)) {
-					p.sendMessage("§cYou are already in a guild");
-					return true;
-				}
-				Guild g = FactionManager.getGuildByString(args[1]);
-				if(g == null) {
-					p.sendMessage("§cNo guild by the id "+args[1]);
-					return true;
-				}
-				if(!g.consumeInvite(p.getName())) {
-					p.sendMessage("§cYou need to be invited to this guild by the leader first!");
-					return true;
-				}
-				Guild previous = FactionManager.getGuildByMember(p.getName());
-				if(previous != null) {
-					previous.kick(p.getName());
-				}
-				g.addMember(p.getName());
-				p.sendMessage("§aJoined "+g.getName());
-				g.getFaction().updatePrestige();
-				for(Player pl : Bukkit.getOnlinePlayers()) {
-					if(g.getFaction().getMembers().contains(pl.getName())) {
-						pl.sendMessage("§a"+p.getName()+ " joined the faction!");
-					}
-				}
+				p.sendMessage("§aInvited "+name);
+				invited.sendMessage("§a"+p.getName()+" invited you to the guild "+guild.getName());
+				invited.sendMessage(InviteCommands.buttons(cmd2, guild.getId(), guild.getName()));
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("leave") && args.length == 1) {
 				if(FactionManager.getGuildByMember(p.getName()) == null) {
@@ -519,6 +493,37 @@ public class CommandManager implements Listener, CommandExecutor{
 				for(Player pl : Bukkit.getOnlinePlayers()) {
 					if(g.isMember(pl.getName())) {
 						pl.sendMessage("§a"+args[1]+ " is the new guild leader!");
+					}
+				}
+				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("forceleader") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Guild g = FactionManager.getGuildByString(args[1]);
+				if(g == null) {
+					p.sendMessage("§cNo guild by the id "+args[1]);
+					return true;
+				}
+				if(g.isBase()) {
+					p.sendMessage("§cThis is the base guild, use /faction forceleader instead");
+					return true;
+				}
+				String member = Guild.findIgnoreCase(g.getMembers(), args[2]);
+				if(member == null) {
+					p.sendMessage("§cPlayer is not in the guild");
+					return true;
+				}
+				if(g.isLeader(member)) {
+					p.sendMessage("§cPlayer is already the leader");
+					return true;
+				}
+				g.setLeader(member);
+				p.sendMessage("§a"+member+" now leads "+g.getName());
+				for(Player pl : Bukkit.getOnlinePlayers()) {
+					if(!pl.equals(p) && g.isMember(pl.getName())) {
+						pl.sendMessage("§a"+member+ " is the new guild leader!");
 					}
 				}
 				return true;
@@ -948,30 +953,7 @@ public class CommandManager implements Listener, CommandExecutor{
 				f.invite(name);
 				p.sendMessage("§aInvited "+name);
 				invited.sendMessage("§a"+p.getName()+ " invited you to "+f.getName());
-				invited.sendMessage("§aType /faction join "+f.getId() +"§a to join");
-				return true;
-			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("join") && args.length == 2) {
-				if(FactionManager.getByMember(p.getName()) != null) {
-					p.sendMessage("§cAlready in a faction, leave your current faction first!");
-					return true;
-				}
-				Faction f = FactionManager.getByString(args[1]);
-				if(f == null) {
-					p.sendMessage("§cNo faction with that name exists");
-					return true;
-				}
-				if(!f.consumeInvite(p.getName())) {
-					p.sendMessage("§cYou need to be invited to this faction by the leader first!");
-					return true;
-				}
-				f.addMember(p.getName());
-				p.sendMessage("§aJoined "+f.getName());
-				f.updatePrestige();
-				for(Player pl : Bukkit.getOnlinePlayers()) {
-					if(f.getMembers().contains(pl.getName())) {
-						pl.sendMessage("§a"+p.getName()+ " joined the faction!");
-					}
-				}
+				invited.sendMessage(InviteCommands.buttons(cmd1, f.getId(), f.getName()));
 				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd1) && args[0].equalsIgnoreCase("leave") && args.length == 1) {
 				if(FactionManager.getByMember(p.getName()) == null) {

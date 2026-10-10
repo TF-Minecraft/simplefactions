@@ -18,6 +18,7 @@ import net.tfminecraft.simplefactions.guild.Guild;
 import net.tfminecraft.simplefactions.loaders.LawLoader;
 import net.tfminecraft.simplefactions.loaders.RelationLoader;
 import net.tfminecraft.simplefactions.managers.FactionManager;
+import net.tfminecraft.simplefactions.managers.InviteCommands;
 import net.tfminecraft.simplefactions.managers.RelationManager;
 import net.tfminecraft.simplefactions.managers.RequestManager;
 import net.tfminecraft.simplefactions.managers.TitleManager;
@@ -202,6 +203,7 @@ public class TabCompletion implements TabCompleter{
 				List<String> completions = new ArrayList<>();
 				completions.add("create");
 				completions.add("join");
+				completions.add("decline");
 				completions.add("menu");
 				completions.add("setbank");
 				completions.add("deposit");
@@ -220,6 +222,7 @@ public class TabCompletion implements TabCompleter{
 				if(Permissions.isAdmin(sender)) {
 					completions.add("dummify");
 					completions.add("dummyleader");
+					completions.add("forceleader");
 				}
 				return completions;
 			}
@@ -547,6 +550,11 @@ public class TabCompletion implements TabCompleter{
 				
 				return completions;
 			}
+		} else if(eitherCommand(cmd) && args.length == 2
+				&& (args[0].equalsIgnoreCase("join") || args[0].equalsIgnoreCase("decline"))){
+			if(sender instanceof Player p){
+				return InviteCommands.inviteIds(cmd.getName(), p.getName(), args[1]);
+			}
 		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("accept")){
 			if(sender instanceof Player){
 				List<String> completions = new ArrayList<String>();
@@ -571,6 +579,23 @@ public class TabCompletion implements TabCompleter{
 					
 					return completions;
 				}
+			} else if(cmd.getName().equalsIgnoreCase("guild") && args.length == 2 && args[0].equalsIgnoreCase("forceleader")){
+				List<String> completions = new ArrayList<String>();
+				for(Faction f : FactionManager.factions) {
+					for(Guild g : f.getGuildHandler().getGuilds()) {
+						if(!g.isBase() && g.getId().toLowerCase().startsWith(args[1].toLowerCase())) completions.add(g.getId());
+					}
+				}
+				return completions;
+			} else if(cmd.getName().equalsIgnoreCase("guild") && args.length == 3 && args[0].equalsIgnoreCase("forceleader")){
+				List<String> completions = new ArrayList<String>();
+				Guild g = FactionManager.getGuildByString(args[1]);
+				if(g != null) {
+					for(String member : g.getMembers()) {
+						if(!g.isLeader(member) && member.toLowerCase().startsWith(args[2].toLowerCase())) completions.add(member);
+					}
+				}
+				return completions;
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("forceleader")){
 				if(sender instanceof Player){
 					List<String> completions = new ArrayList<String>();
