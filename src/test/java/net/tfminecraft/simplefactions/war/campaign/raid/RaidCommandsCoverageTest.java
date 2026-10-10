@@ -41,10 +41,13 @@ class RaidCommandsCoverageTest {
   private RaidCommandManager commands;
   private RaidTabCompletion tabs;
   private List<Warband> previousBands;
+  private Duration previousClockOffset;
 
   @BeforeEach
   void setUp() {
     // The fixture musters close at 18:00 on battle day; run the campaign clock an hour before.
+    previousClockOffset = CampaignClock.getOffset();
+    CampaignClock.reset();
     CampaignClock.add(Duration.between(Instant.now(), Instant.parse("2026-10-10T17:00:00Z")));
     databases = mockConstruction(Database.class);
     fixture = new FactionDomainFixture();
@@ -63,6 +66,7 @@ class RaidCommandsCoverageTest {
   @AfterEach
   void close() {
     CampaignClock.reset();
+    CampaignClock.add(previousClockOffset);
     WarbandManager.get().clear();
     WarbandManager.get().addAll(previousBands);
     fixture.close();
