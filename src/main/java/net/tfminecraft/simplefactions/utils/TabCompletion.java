@@ -18,6 +18,7 @@ import net.tfminecraft.simplefactions.guild.Guild;
 import net.tfminecraft.simplefactions.loaders.LawLoader;
 import net.tfminecraft.simplefactions.loaders.RelationLoader;
 import net.tfminecraft.simplefactions.managers.FactionManager;
+import net.tfminecraft.simplefactions.managers.InviteCommands;
 import net.tfminecraft.simplefactions.managers.RelationManager;
 import net.tfminecraft.simplefactions.managers.RequestManager;
 import net.tfminecraft.simplefactions.managers.TitleManager;
@@ -202,6 +203,7 @@ public class TabCompletion implements TabCompleter{
 				List<String> completions = new ArrayList<>();
 				completions.add("create");
 				completions.add("join");
+				completions.add("decline");
 				completions.add("menu");
 				completions.add("setbank");
 				completions.add("deposit");
@@ -546,6 +548,11 @@ public class TabCompletion implements TabCompleter{
 				List<String> completions = new ArrayList<String>();
 				
 				return completions;
+			}
+		} else if(eitherCommand(cmd) && args.length == 2
+				&& (args[0].equalsIgnoreCase("join") || args[0].equalsIgnoreCase("decline"))){
+			if(sender instanceof Player p){
+				return InviteCommands.inviteIds(cmd.getName(), p.getName(), args[1]);
 			}
 		} else if(eitherCommand(cmd) && args.length == 2 && args[0].equalsIgnoreCase("accept")){
 			if(sender instanceof Player){

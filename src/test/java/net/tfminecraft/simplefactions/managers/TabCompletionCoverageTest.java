@@ -664,6 +664,21 @@ class TabCompletionCoverageTest {
     when(player.hasPermission(Permissions.Permission_Admin)).thenReturn(true);
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"join", "decline"})
+  void joinAndDeclineSuggestOnlyPendingInvites(String action) {
+    when(realm.isInvited("Leader")).thenReturn(true);
+    Guild smiths = mock(Guild.class);
+    when(smiths.getId()).thenReturn("Smiths");
+    when(smiths.isInvited("Leader")).thenReturn(true);
+    GuildHandler handler = mock(GuildHandler.class);
+    when(handler.getGuilds()).thenReturn(List.of(smiths));
+    when(other.getGuildHandler()).thenReturn(handler);
+    assertEquals(List.of("realm"), complete("faction", action, "r"));
+    assertEquals(List.of(), complete("faction", action, "o"));
+    assertEquals(List.of("Smiths"), complete("guild", action, "sm"));
+  }
+
   private Faction realm(String id, String name) {
     Faction faction = mock(Faction.class);
     when(faction.getId()).thenReturn(id);

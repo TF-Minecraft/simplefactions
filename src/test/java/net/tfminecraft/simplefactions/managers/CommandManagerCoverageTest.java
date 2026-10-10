@@ -64,6 +64,7 @@ import net.tfminecraft.simplefactions.utils.RandomRGB;
 import net.tfminecraft.simplefactions.vehicles.VehicleFactionCommands;
 import net.tfminecraft.simplefactions.vehicles.berth.VehicleFindMessages;
 import net.tfminecraft.simplefactions.vehicles.maintenance.VehicleMaintenancePayService.PaymentSource;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
@@ -895,8 +896,93 @@ class CommandManagerCoverageTest {
       verify(guild).addMember("Leader");
     }
     verify(faction).updatePrestige();
-    verify(alice).sendMessage(contains("joined the faction"));
+    if (name.equals("faction")) verify(alice).sendMessage("§aLeader joined the faction!");
+    else verify(alice).sendMessage("§aLeader joined the guild Merchants§a!");
     verify(outsider, never()).sendMessage(anyString());
+  }
+
+  @Test
+  void joiningDoesNotAnnounceTheJoinToTheJoiner() {
+    factions.when(() -> FactionManager.canJoinGuild(player)).thenReturn(true);
+    when(guild.consumeInvite("Leader")).thenReturn(true);
+    online(player);
+    assertTrue(run("guild", "join", "merchants"));
+    verify(player).sendMessage("§aJoined Merchants");
+    verify(player, never()).sendMessage(contains("joined the"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"faction", "guild"})
+  void joinWithoutAnIdAcceptsTheOnlyPendingInvite(String name) {
+    FactionManager.factions.add(faction);
+    when(guilds.getGuilds()).thenReturn(List.of(guild));
+    factions.when(() -> FactionManager.canJoinGuild(player)).thenReturn(true);
+    assertTrue(run(name, "join"));
+    verify(player).sendMessage("§cYou have no " + name + " invites");
+    when(faction.isInvited("Leader")).thenReturn(true);
+    when(guild.isInvited("Leader")).thenReturn(true);
+    when(faction.consumeInvite("Leader")).thenReturn(true);
+    when(guild.consumeInvite("Leader")).thenReturn(true);
+    assertTrue(run(name, "join"));
+    if (name.equals("faction")) verify(faction).addMember("Leader");
+    else verify(guild).addMember("Leader");
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"faction", "guild"})
+  void joinWithoutAnIdListsSeveralInvitesWithButtons(String name) {
+    Faction second = mock(Faction.class);
+    when(second.getId()).thenReturn("north");
+    when(second.getName()).thenReturn("North");
+    when(second.isInvited("Leader")).thenReturn(true);
+    when(second.getGuildHandler()).thenReturn(guilds);
+    Guild other = mock(Guild.class);
+    when(other.getId()).thenReturn("smiths");
+    when(other.getName()).thenReturn("Smiths");
+    when(other.isInvited("Leader")).thenReturn(true);
+    FactionManager.factions.addAll(List.of(faction, second));
+    when(guilds.getGuilds()).thenReturn(List.of(guild, other));
+    when(faction.isInvited("Leader")).thenReturn(true);
+    when(guild.isInvited("Leader")).thenReturn(true);
+    assertTrue(run(name, "join"));
+    verify(player).sendMessage(contains("invites:"));
+    ArgumentCaptor<Component> rows = ArgumentCaptor.forClass(Component.class);
+    verify(player, atLeast(2)).sendMessage(rows.capture());
+    List<String> commands = rows.getAllValues().stream().flatMap(row -> clickCommands(row).stream()).toList();
+    String first = name.equals("faction") ? "realm" : "merchants";
+    assertTrue(commands.contains("/" + name + " join " + first));
+    assertTrue(commands.contains("/" + name + " decline " + first));
+    verify(faction, never()).addMember(anyString());
+    verify(guild, never()).addMember(anyString());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"faction", "guild"})
+  void decliningRemovesTheInviteAndTellsAnOnlineLeader(String name) {
+    String id = name.equals("faction") ? "realm" : "merchants";
+    String shown = name.equals("faction") ? "Realm" : "Merchants";
+    assertTrue(run(name, "decline", id));
+    verify(player).sendMessage("§cYou have no invite from that " + name);
+    assertTrue(run(name, "decline", "missing"));
+    verify(player, times(2)).sendMessage("§cYou have no invite from that " + name);
+    Player alice = gui.player("Alice");
+    when(faction.getLeader()).thenReturn("Alice");
+    when(guild.getLeader()).thenReturn("Alice");
+    when(Bukkit.getPlayerExact("Alice")).thenReturn(alice);
+    when(faction.consumeInvite("Leader")).thenReturn(true);
+    when(guild.consumeInvite("Leader")).thenReturn(true);
+    assertTrue(run(name, "decline", id));
+    verify(player).sendMessage("§aDeclined the invite to " + shown);
+    verify(alice).sendMessage("§cLeader declined your invite to " + shown);
+    verify(faction, never()).addMember(anyString());
+    verify(guild, never()).addMember(anyString());
+  }
+
+  private static List<String> clickCommands(Component component) {
+    List<String> commands = new ArrayList<>();
+    if (component.clickEvent() != null) commands.add(component.clickEvent().value());
+    for (Component child : component.children()) commands.addAll(clickCommands(child));
+    return commands;
   }
 
   @Test
@@ -1707,7 +1793,10 @@ class CommandManagerCoverageTest {
       assertTrue(run("faction", "invite", "Lady", "Alice"));
       verify(faction).invite("Alice");
       verify(alice).sendMessage(contains("invited you"));
-      verify(alice).sendMessage(contains("/faction join realm"));
+      ArgumentCaptor<Component> buttons = ArgumentCaptor.forClass(Component.class);
+      verify(alice).sendMessage(buttons.capture());
+      assertEquals(
+          List.of("/faction join realm", "/faction decline realm"), clickCommands(buttons.getValue()));
     } finally {
       Cache.maxMembers = oldMaximum;
     }
@@ -1756,7 +1845,13 @@ class CommandManagerCoverageTest {
       when(other.isLeader("Alice")).thenReturn(false);
       assertTrue(run("guild", "invite", "Lady", "Alice"));
       verify(guild).invite("Alice");
-      verify(alice).sendMessage(contains("invited to the guild"));
+      verify(player).sendMessage("§aInvited Alice");
+      verify(alice).sendMessage("§aLeader invited you to the guild Merchants");
+      ArgumentCaptor<Component> buttons = ArgumentCaptor.forClass(Component.class);
+      verify(alice).sendMessage(buttons.capture());
+      assertEquals(
+          List.of("/guild join merchants", "/guild decline merchants"),
+          clickCommands(buttons.getValue()));
     }
   }
 

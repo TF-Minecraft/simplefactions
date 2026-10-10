@@ -146,7 +146,7 @@ class GuildDeleteCommandTest {
       assertEquals(List.of("Leader", "Member", "Offline", "Joiner"), fixture.members);
       verify(fixture.faction).updatePrestige();
       verify(fixture.player).sendMessage("§aJoined Smiths");
-      verify(fixture.member).sendMessage("§aJoiner joined the faction!");
+      verify(fixture.member).sendMessage("§aJoiner joined the guild Smiths§a!");
       assertSame(fixture.guild, fixture.guilds.getGuild("smiths"));
       verifyNoInteractions(fixture.provinces);
     }
