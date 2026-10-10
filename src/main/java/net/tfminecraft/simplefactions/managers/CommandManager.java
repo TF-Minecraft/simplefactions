@@ -496,6 +496,37 @@ public class CommandManager implements Listener, CommandExecutor{
 					}
 				}
 				return true;
+			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("forceleader") && args.length == 3) {
+				if(!Permissions.isAdmin(sender)) {
+					p.sendMessage("§a[SimpleFactions]§c You do not have access to this command");
+					return true;
+				}
+				Guild g = FactionManager.getGuildByString(args[1]);
+				if(g == null) {
+					p.sendMessage("§cNo guild by the id "+args[1]);
+					return true;
+				}
+				if(g.isBase()) {
+					p.sendMessage("§cThis is the base guild, use /faction forceleader instead");
+					return true;
+				}
+				String member = Guild.findIgnoreCase(g.getMembers(), args[2]);
+				if(member == null) {
+					p.sendMessage("§cPlayer is not in the guild");
+					return true;
+				}
+				if(g.isLeader(member)) {
+					p.sendMessage("§cPlayer is already the leader");
+					return true;
+				}
+				g.setLeader(member);
+				p.sendMessage("§a"+member+" now leads "+g.getName());
+				for(Player pl : Bukkit.getOnlinePlayers()) {
+					if(!pl.equals(p) && g.isMember(pl.getName())) {
+						pl.sendMessage("§a"+member+ " is the new guild leader!");
+					}
+				}
+				return true;
 			} else if(cmd.getName().equalsIgnoreCase(cmd2) && args[0].equalsIgnoreCase("rename") && args.length == 2) {
 				Guild g = FactionManager.getGuildByLeader(p.getName());
 				if(g == null) {

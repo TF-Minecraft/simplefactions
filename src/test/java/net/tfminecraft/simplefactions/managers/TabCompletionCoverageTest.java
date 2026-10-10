@@ -679,6 +679,25 @@ class TabCompletionCoverageTest {
     assertEquals(List.of("Smiths"), complete("guild", action, "sm"));
   }
 
+  @Test
+  void guildForceLeaderSuggestsSubGuildsThenTheirOtherMembersForAdmins() {
+    Guild base = mock(Guild.class);
+    when(base.getId()).thenReturn("realm");
+    when(base.isBase()).thenReturn(true);
+    GuildHandler handler = mock(GuildHandler.class);
+    when(handler.getGuilds()).thenReturn(List.of(base, guild));
+    when(realm.getGuildHandler()).thenReturn(handler);
+    when(guild.isLeader("Leader")).thenReturn(true);
+    factions.when(() -> FactionManager.getGuildByString("merchants")).thenReturn(guild);
+    assertFalse(complete("guild").contains("forceleader"));
+    assertEquals(List.of(), complete("guild", "forceleader", ""));
+    admin();
+    assertTrue(complete("guild").contains("forceleader"));
+    assertEquals(List.of("merchants"), complete("guild", "forceleader", ""));
+    assertEquals(List.of("Alice"), complete("guild", "forceleader", "merchants", "a"));
+    assertEquals(List.of(), complete("guild", "forceleader", "missing", ""));
+  }
+
   private Faction realm(String id, String name) {
     Faction faction = mock(Faction.class);
     when(faction.getId()).thenReturn(id);

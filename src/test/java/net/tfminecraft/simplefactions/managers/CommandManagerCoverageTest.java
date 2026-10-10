@@ -978,6 +978,34 @@ class CommandManagerCoverageTest {
     verify(guild, never()).addMember(anyString());
   }
 
+  @Test
+  void forceLeaderHandsAGuildToAnExistingMemberForAdminsOnly() {
+    assertTrue(run("guild", "forceleader", "merchants", "alice"));
+    verify(player).sendMessage(contains("do not have access"));
+    admin();
+    assertTrue(run("guild", "forceleader", "missing", "alice"));
+    verify(player).sendMessage("§cNo guild by the id missing");
+    when(guild.isBase()).thenReturn(true);
+    assertTrue(run("guild", "forceleader", "merchants", "alice"));
+    verify(player).sendMessage(contains("use /faction forceleader"));
+    when(guild.isBase()).thenReturn(false);
+    assertTrue(run("guild", "forceleader", "merchants", "Visitor"));
+    verify(player).sendMessage("§cPlayer is not in the guild");
+    when(guild.isLeader("Leader")).thenReturn(true);
+    assertTrue(run("guild", "forceleader", "merchants", "leader"));
+    verify(player).sendMessage("§cPlayer is already the leader");
+    verify(guild, never()).setLeader(anyString());
+    Player alice = gui.player("Alice"), outsider = gui.player("Visitor");
+    when(guild.isMember("Alice")).thenReturn(true);
+    online(player, alice, outsider);
+    assertTrue(run("guild", "forceleader", "merchants", "alice"));
+    verify(guild).setLeader("Alice");
+    verify(player).sendMessage("§aAlice now leads Merchants");
+    verify(alice).sendMessage("§aAlice is the new guild leader!");
+    verify(player, never()).sendMessage("§aAlice is the new guild leader!");
+    verify(outsider, never()).sendMessage(anyString());
+  }
+
   private static List<String> clickCommands(Component component) {
     List<String> commands = new ArrayList<>();
     if (component.clickEvent() != null) commands.add(component.clickEvent().value());

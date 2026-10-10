@@ -222,6 +222,7 @@ public class TabCompletion implements TabCompleter{
 				if(Permissions.isAdmin(sender)) {
 					completions.add("dummify");
 					completions.add("dummyleader");
+					completions.add("forceleader");
 				}
 				return completions;
 			}
@@ -578,6 +579,23 @@ public class TabCompletion implements TabCompleter{
 					
 					return completions;
 				}
+			} else if(cmd.getName().equalsIgnoreCase("guild") && args.length == 2 && args[0].equalsIgnoreCase("forceleader")){
+				List<String> completions = new ArrayList<String>();
+				for(Faction f : FactionManager.factions) {
+					for(Guild g : f.getGuildHandler().getGuilds()) {
+						if(!g.isBase() && g.getId().toLowerCase().startsWith(args[1].toLowerCase())) completions.add(g.getId());
+					}
+				}
+				return completions;
+			} else if(cmd.getName().equalsIgnoreCase("guild") && args.length == 3 && args[0].equalsIgnoreCase("forceleader")){
+				List<String> completions = new ArrayList<String>();
+				Guild g = FactionManager.getGuildByString(args[1]);
+				if(g != null) {
+					for(String member : g.getMembers()) {
+						if(!g.isLeader(member) && member.toLowerCase().startsWith(args[2].toLowerCase())) completions.add(member);
+					}
+				}
+				return completions;
 			} else if(cmd.getName().equalsIgnoreCase("faction") && args.length == 3 && args[0].equalsIgnoreCase("forceleader")){
 				if(sender instanceof Player){
 					List<String> completions = new ArrayList<String>();
